@@ -27,7 +27,13 @@
   <button name="shutdown" value="shutdown">Shutdown Server</button>
 </form>
 
-{% for doc in coll.find() %}
+{% if db_backend == 'tinydb' %}
+   {% set colls = coll.all() %}
+{% else %}
+   {% set colls = coll.find() %}
+{% endif %}
+
+{% for doc in colls %}
   {% set docdump = json_util.dumps(doc, sort_keys=True, indent=1) %}
   <div id="{{doc._id}}" style="text-align:center;vertical-align:middle;">
   <h3>{{doc._id}} 

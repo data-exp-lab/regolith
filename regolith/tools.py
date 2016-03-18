@@ -5,9 +5,10 @@ import re
 import sys
 import platform
 import email.utils
+from tinydb import Query
 from datetime import datetime
 
-import pymongo
+#import pymongo
 
 if sys.version_info[0] >= 3:
     string_types = (str, bytes)
@@ -23,12 +24,12 @@ ON_MAC = (platform.system() == 'Darwin')
 ON_LINUX = (platform.system() == 'Linux')
 ON_POSIX = (os.name == 'posix')
 
-if pymongo.version.split('.')[0] == '2':
-    ON_PYMONGO_V2 = True
-    ON_PYMONGO_V3 = False
-else:
-    ON_PYMONGO_V2 = False
-    ON_PYMONGO_V3 = True
+#if pymongo.version.split('.')[0] == '2':
+#    ON_PYMONGO_V2 = True
+#    ON_PYMONGO_V3 = False
+#else:
+ON_PYMONGO_V2 = False
+ON_PYMONGO_V3 = True
 
 def fallback(cond, backup):
     """Decorator for returning the object if cond is true and a backup if cond is false.
@@ -46,6 +47,8 @@ class InsertOneProxy(object):
 
 
 def insert_one(coll, doc):
+    return coll.insert(doc)
+
     if ON_PYMONGO_V2:
         i = coll.insert(doc)
         return InsertOneProxy(i, True)
@@ -53,18 +56,33 @@ def insert_one(coll, doc):
         return coll.insert_one(doc)
 
 def insert_many(coll, docs):
+    return coll.insert_multiple(docs)
+
     if ON_PYMONGO_V2:
         return coll.insert(docs)
     else:
         return coll.insert_many(docs)
 
 def delete_one(coll, doc):
+    return coll.remove(eids=[coll.get(Query()._id == doc["_id"]).eid])
+
     if ON_PYMONGO_V2:
         return coll.remove(doc, multi=False)
     else:
         return coll.delete_one(doc)
+
+def all_docs_from_collection_tinydb(client, collname):
+    """Yield all entries in for all collections of a given name in a given database."""
+    for dbname in client.database_names():
+        if dbname == 'local':
+            continue
+        db = client[dbname]
+        if collname not in db.tables():
+            continue
+        yield from db.table(collname).all()
+
     
-def all_docs_from_collection(client, collname):
+def all_docs_from_collection_mongo(client, collname):
     """Yield all entries in for all collections of a given name in a given database."""
     for dbname in client.database_names():
         if dbname == 'local':
@@ -178,3 +196,12 @@ def month_and_year(m=None, y=None):
     m = month_to_int(m)
     return '{0} {1}'.format(SHORT_MONTH_NAMES[m], y)
 
+
+def db_backend(rc):
+    backend = "mongo"
+    try:
+        if all([t["type"] == "tinydb" for t in rc.databases]):
+            backend = "tinydb"
+    except KeyError:
+        pass
+    return backend

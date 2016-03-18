@@ -5,9 +5,15 @@
 {% for dbname in rc.client.database_names() if dbname != 'local' %}
   <h3>{{ dbname }}</h3>
   <ul>
-  {% for collname in rc.client[dbname].collection_names(include_system_collections=False) %}
-    <li><a href="/db/{{dbname}}/coll/{{collname}}">{{collname}}</a></li>
-  {% endfor %}
+  {% if db_backend == 'tinydb' %}
+    {% for collname in rc.client[dbname].tables() %}
+      <li><a href="/db/{{dbname}}/coll/{{collname}}">{{collname}}</a></li>
+    {% endfor %}
+  {% else %}
+    {% for collname in rc.client[dbname].collection_names(include_system_collections=False) %}
+      <li><a href="/db/{{dbname}}/coll/{{collname}}">{{collname}}</a></li>
+    {% endfor %}
+  {% endif %}
   </ul>
 
   <div style="margin-left:1.5em;">

@@ -11,7 +11,10 @@ try:
 except ImportError:
     HAVE_BIBTEX_PARSER = False
 
-from regolith.tools import all_docs_from_collection, date_to_float, date_to_rfc822, \
+from regolith.tools import \
+    all_docs_from_collection_tinydb, \
+    all_docs_from_collection_mongo, \
+    date_to_float, date_to_rfc822, \
     rfc822now, gets
 from regolith.sorters import doc_date_key, ene_date_key, category_val, \
     level_val, id_key, date_key, position_key
@@ -23,6 +26,12 @@ class HtmlBuilder(object):
 
     def __init__(self, rc):
         self.rc = rc
+        self.all_docs_func = all_docs_from_collection_mongo
+        try:
+            if all([t["type"] == "tinydb" for t in rc.databases]):
+                self.all_docs_func = all_docs_from_collection_tinydb
+        except KeyError:
+            pass
         self.bldir = os.path.join(rc.builddir, self.btype)
         self.env = Environment(loader=FileSystemLoader([
                     'templates',
@@ -49,10 +58,10 @@ class HtmlBuilder(object):
         gtx['category_val'] = category_val
         gtx['rfc822now'] = rfc822now
         gtx['date_to_rfc822'] = date_to_rfc822
-        gtx['jobs'] = list(all_docs_from_collection(rc.client, 'jobs'))
-        gtx['people'] = sorted(all_docs_from_collection(rc.client, 'people'), 
+        gtx['jobs'] = list(self.all_docs_func(rc.client, 'jobs'))
+        gtx['people'] = sorted(self.all_docs_func(rc.client, 'people'), 
                                key=position_key, reverse=True)
-        gtx['all_docs_from_collection'] = all_docs_from_collection
+        gtx['all_docs_from_collection'] = self.all_docs_func
 
     def render(self, tname, fname, **kwargs):
         template = self.env.get_template(tname)
@@ -106,7 +115,7 @@ class HtmlBuilder(object):
     def filter_publications(self, authors, reverse=False):
         rc = self.rc
         pubs = []
-        for pub in all_docs_from_collection(rc.client, 'citations'):
+        for pub in self.all_docs_func(rc.client, 'citations'):
             if len(set(pub['author']) & authors) == 0:
                 continue
             pubs.append(pub)
@@ -131,7 +140,7 @@ class HtmlBuilder(object):
     def filter_projects(self, authors, reverse=False):
         rc = self.rc
         projs = []
-        for proj in all_docs_from_collection(rc.client, 'projects'):
+        for proj in self.all_docs_func(rc.client, 'projects'):
             team_names = set(gets(proj['team'], 'name'))
             if len(team_names & authors) == 0:
                 continue
@@ -143,14 +152,14 @@ class HtmlBuilder(object):
 
     def projects(self):
         rc = self.rc
-        projs = all_docs_from_collection(rc.client, 'projects')
+        projs = self.all_docs_func(rc.client, 'projects')
         self.render('projects.html', 'projects.html', title='Projects', projects=projs)
 
     def blog(self):
         rc = self.rc
         blog_dir = os.path.join(self.bldir, 'blog')
         os.makedirs(blog_dir, exist_ok=True)
-        posts = list(all_docs_from_collection(rc.client, 'blog'))
+        posts = list(self.all_docs_func(rc.client, 'blog'))
         posts.sort(key=ene_date_key, reverse=True)
         for post in posts:
             self.render('blog_post.html', os.path.join('blog', post['_id'] + '.html'), 

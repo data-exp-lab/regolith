@@ -2,7 +2,7 @@
 import os
 from itertools import groupby
 
-from regolith.tools import all_docs_from_collection, date_to_float, date_to_rfc822, \
+from regolith.tools import date_to_float, date_to_rfc822, \
     rfc822now
 
 

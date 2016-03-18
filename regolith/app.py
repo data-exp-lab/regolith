@@ -4,7 +4,8 @@ import traceback
 from flask import Flask, abort, request, render_template, redirect, url_for
 from bson import json_util, objectid
 
-from regolith.tools import insert_one, delete_one
+from regolith.tools import insert_one, delete_one, db_backend
+from tinydb import Query
 
 app = Flask('regolith')
 
@@ -15,7 +16,7 @@ def root():
     if request.method == 'POST':
         form = request.form
         return redirect('/db/{dbname}/coll/{collname}'.format(**form))
-    return render_template('index.html', rc=rc)
+    return render_template('index.html', rc=rc, db_backend=db_backend(rc))
 
 
 def shutdown_server():
@@ -34,7 +35,10 @@ def shutdown():
 def collection_page(dbname, collname):
     rc = app.rc
     try:
-        coll = rc.client[dbname][collname]
+        if db_backend(rc) == "tinydb":
+            coll = rc.client[dbname].table(collname)
+        else:
+            coll = rc.client[dbname][collname]
     except (KeyError, AttributeError):
         abort(404)
     status = status_id = None
@@ -52,7 +56,10 @@ def collection_page(dbname, collname):
             except Exception:
                 traceback.print_exc()
                 raise
-            coll.save(body) 
+            if db_backend(rc) == "tinydb":
+                coll.update(body, eids=[coll.get(Query()._id == body["_id"]).eid])
+            else:
+                coll.save(body)
             status = 'saved ✓'
             status_id = str(body['_id'])
         elif 'add' in form:
@@ -67,10 +74,14 @@ def collection_page(dbname, collname):
                 traceback.print_exc()
                 raise
             status = 'added ✓'
-            status_id = str(added.inserted_id)
+            if db_backend(rc) == "tinydb":
+                status_id = str(added)
+            else:
+                status_id = str(added.inserted_id)
         elif 'delete' in form:
             body = json_util.loads(form['body'].strip())
             deled = delete_one(coll, body)
     return render_template('collection.html', rc=rc, dbname=dbname, len=len, str=str,
                            status=status, status_id=status_id, objectid=objectid,
-                           collname=collname, coll=coll, json_util=json_util, min=min)
+                           collname=collname, coll=coll, json_util=json_util, min=min,
+                           db_backend=db_backend(rc))

@@ -6,7 +6,8 @@ from argparse import ArgumentParser
 
 from regolith.runcontrol import RunControl, NotSpecified
 from regolith.validators import DEFAULT_VALIDATORS
-from regolith.database import connect
+from regolith.database import connect_mongo, connect_tinydb
+from regolith.tools import db_backend
 from regolith import commands
 from regolith import storage
 
@@ -113,6 +114,10 @@ def main(args=None):
     ns = parser.parse_args(args)
     rc._update(ns.__dict__)
     filter_databases(rc)
+    if db_backend(rc) == "tinydb":
+        connect = connect_tinydb
+    else:
+        connect = connect_mongo
     if rc.cmd in DISCONNECTED_COMMANDS:
         DISCONNECTED_COMMANDS[rc.cmd](rc)
     else:
