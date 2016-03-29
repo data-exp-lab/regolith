@@ -94,7 +94,9 @@ class HtmlBuilder(object):
 
     def root_index(self):
         rc = self.rc
-        self.render('root_index.html', 'index.html', title='Home')
+        projs = list(self.all_docs_func(rc.client, 'projects'))
+        self.render('root_index.html', 'index.html', title='Home', projects =
+            projs)
 
     def people(self):
         rc = self.rc
