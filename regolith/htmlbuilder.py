@@ -81,10 +81,11 @@ class HtmlBuilder(object):
         self.root_index()
         self.people()
         self.projects()
-        self.blog()
-        self.jobs()
+        #self.blog()
+        #self.jobs()
         self.nojekyll()
-        self.cname()
+        #self.cname()
+        self.publications()
         # static
         stsrc = os.path.join('templates', 'static')
         stdst = os.path.join(self.bldir, 'static')
@@ -156,6 +157,12 @@ class HtmlBuilder(object):
         rc = self.rc
         projs = self.all_docs_func(rc.client, 'projects')
         self.render('projects.html', 'projects.html', title='Projects', projects=projs)
+
+    def publications(self):
+        rc = self.rc
+        pubs = self.all_docs_func(rc.client, 'citations')
+        self.render('publications.html', 'publications.html',
+            title='Publications', pubs=pubs)
 
     def blog(self):
         rc = self.rc
