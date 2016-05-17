@@ -18,7 +18,8 @@ try:
 except ImportError:
     np = None
 
-from regolith.tools import all_docs_from_collection, date_to_float, \
+from regolith.tools import all_docs_from_collection_mongo as all_docs_from_collection
+from regolith.tools import date_to_float, \
     date_to_rfc822, rfc822now, gets, month_and_year
 from regolith.sorters import doc_date_key, ene_date_key, category_val, \
     level_val, id_key, date_key, position_key
